@@ -72,7 +72,7 @@ class ProgressSpinner:
             time.sleep(0.1)
 
 
-def transcribe_video_with_gemini(video_file_path: str) -> None:
+def transcribe_video_with_gemini(video_file_path: str, output_dir: str = OUTPUT_DIR) -> None:
     """
     Transcribes a video file to text using Google's Gemini AI model.
     """
@@ -96,7 +96,7 @@ def transcribe_video_with_gemini(video_file_path: str) -> None:
 
         transcription_text = _transcribe_audio_with_gemini(temp_audio_file_path)
 
-        output_transcription_file_path = _generate_output_filename(video_file_path)
+        output_transcription_file_path = _generate_output_filename(video_file_path, output_dir)
         _save_transcription_to_file(transcription_text, output_transcription_file_path)
 
         # print("\n==== Transcription ====")
@@ -178,10 +178,10 @@ def _transcribe_audio_with_gemini(audio_file_path: str) -> str:
     return transcription_text
 
 
-def _generate_output_filename(video_file_path: str) -> str:
+def _generate_output_filename(video_file_path: str, output_dir: str) -> str:
     video_filename_without_extension = os.path.splitext(os.path.basename(video_file_path))[0]
     output_filename = f"{video_filename_without_extension}{TRANSCRIPTION_FILE_SUFFIX}"
-    return os.path.join(OUTPUT_DIR, output_filename)
+    return os.path.join(output_dir, output_filename)
 
 def _save_transcription_to_file(transcription_text: str, output_file_path: str) -> None:
     if not os.path.exists(OUTPUT_DIR):
@@ -208,6 +208,12 @@ def main() -> None:
         type=str,
         help="Path to the video file to transcribe."
     )
+    argument_parser.add_argument(
+        "-o", "--output",
+        type=str,
+        default=OUTPUT_DIR,
+        help=f"Output directory for transcription file (default: {OUTPUT_DIR})"
+    )
     parsed_arguments = argument_parser.parse_args()
 
     video_file_path = parsed_arguments.video_path
@@ -216,7 +222,7 @@ def main() -> None:
         print("Please provide a valid path to a video file.")
         return
 
-    transcribe_video_with_gemini(video_file_path)
+    transcribe_video_with_gemini(video_file_path, parsed_arguments.output)
 
 
 if __name__ == "__main__":
