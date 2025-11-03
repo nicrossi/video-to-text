@@ -9,7 +9,7 @@ from typing import Optional
 from contextlib import contextmanager
 
 
-MODEL_NAME = "gemini-pro-latest"
+MODEL_NAME = "gemini-2.5-pro"
 TEMP_AUDIO_FILENAME = "temp_audio_for_transcription.mp3"
 AUDIO_CODEC = "mp3"
 AUDIO_MIME_TYPE = "audio/mp3"
@@ -153,27 +153,26 @@ def _extract_audio_from_video(video_file_path: str, output_audio_path: str) -> b
 
 def _transcribe_audio_with_gemini(audio_file_path: str) -> str:
     """
-    Sends audio file to Gemini API for transcription.
+    Sends audio file to Gemini API for transcription using File API.
     """
     gemini_model = genai.GenerativeModel(model_name=MODEL_NAME)
-    with open(audio_file_path, 'rb') as audio_file:
-        audio_binary_data = audio_file.read()
+    print("Uploading audio to Gemini File API...")
+    with suppress_stderr():
+        audio_file = genai.upload_file(audio_file_path, mime_type=AUDIO_MIME_TYPE)
 
+    print(f"Audio uploaded: {audio_file.name}")
     print("Sending audio to Gemini for transcription...")
-    transcription_prompt =  TRANSCRIPTION_PROMPT
-    # Send audio data with inline binary content
-    # suppress gRPC and ALTS warnings
     with suppress_stderr():
         gemini_response = gemini_model.generate_content([
-            transcription_prompt,
-            {
-                "mime_type": AUDIO_MIME_TYPE,
-                "data": audio_binary_data
-            }
+            TRANSCRIPTION_PROMPT,
+            audio_file
         ])
 
     transcription_text = gemini_response.text
     print("Transcription received from Gemini successfully.")
+    print("Freeing resources...")
+    with suppress_stderr():
+        genai.delete_file(audio_file.name)
 
     return transcription_text
 
