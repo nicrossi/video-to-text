@@ -72,22 +72,30 @@ class ProgressSpinner:
             time.sleep(0.1)
 
 
-def transcribe_video_with_gemini(video_file_path: str, output_dir: str = OUTPUT_DIR) -> None:
+def transcribe_video_with_gemini(video_file_path: str, output_dir: str = OUTPUT_DIR, is_audio: bool = False) -> None:
     """
-    Transcribes a video file to text using Google's Gemini AI model.
+    Transcribes a video or audio file to text using Google's Gemini AI model.
     """
     api_key = _get_api_key()
     if not api_key:
         return
 
-    print(f"Loading video from: {video_file_path}")
     temp_audio_file_path = TEMP_AUDIO_FILENAME
-    audio_extraction_successful = _extract_audio_from_video(
-        video_file_path,
-        temp_audio_file_path
-    )
-    if not audio_extraction_successful:
-        return
+    should_cleanup_temp_file = True
+
+    if is_audio:
+        print(f"Loading audio from: {video_file_path}")
+        # Use the audio file directly
+        temp_audio_file_path = video_file_path
+        should_cleanup_temp_file = False
+    else:
+        print(f"Loading video from: {video_file_path}")
+        audio_extraction_successful = _extract_audio_from_video(
+            video_file_path,
+            temp_audio_file_path
+        )
+        if not audio_extraction_successful:
+            return
 
     spinner: Optional[ProgressSpinner] = None
     try:
@@ -109,7 +117,8 @@ def transcribe_video_with_gemini(video_file_path: str, output_dir: str = OUTPUT_
         if spinner:
             spinner.stop()
 
-        _cleanup_temporary_audio_file(temp_audio_file_path)
+        if should_cleanup_temp_file:
+            _cleanup_temporary_audio_file(temp_audio_file_path)
 
 
 def _get_api_key() -> Optional[str]:
@@ -182,6 +191,7 @@ def _generate_output_filename(video_file_path: str, output_dir: str) -> str:
     output_filename = f"{video_filename_without_extension}{TRANSCRIPTION_FILE_SUFFIX}"
     return os.path.join(output_dir, output_filename)
 
+
 def _save_transcription_to_file(transcription_text: str, output_file_path: str) -> None:
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
@@ -200,12 +210,12 @@ def _cleanup_temporary_audio_file(audio_file_path: str) -> None:
 
 def main() -> None:
     argument_parser = argparse.ArgumentParser(
-        description="Transcribe an MP4 video file to text using Google's Gemini AI model."
+        description="Transcribe a video or audio file to text using Google's Gemini AI model."
     )
     argument_parser.add_argument(
-        "video_path",
+        "file_path",
         type=str,
-        help="Path to the video file to transcribe."
+        help="Path to the video or audio file to transcribe."
     )
     argument_parser.add_argument(
         "-o", "--output",
@@ -213,15 +223,20 @@ def main() -> None:
         default=OUTPUT_DIR,
         help=f"Output directory for transcription file (default: {OUTPUT_DIR})"
     )
+    argument_parser.add_argument(
+        "--audio",
+        action="store_true",
+        help="Treat input file as audio (skip video extraction step)"
+    )
     parsed_arguments = argument_parser.parse_args()
 
-    video_file_path = parsed_arguments.video_path
-    if not os.path.exists(video_file_path):
-        print(f"Error: The file '{video_file_path}' does not exist.")
-        print("Please provide a valid path to a video file.")
+    file_path = parsed_arguments.file_path
+    if not os.path.exists(file_path):
+        print(f"Error: The file '{file_path}' does not exist.")
+        print("Please provide a valid path to a video or audio file.")
         return
 
-    transcribe_video_with_gemini(video_file_path, parsed_arguments.output)
+    transcribe_video_with_gemini(file_path, parsed_arguments.output, parsed_arguments.audio)
 
 
 if __name__ == "__main__":
