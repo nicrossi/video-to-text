@@ -1,6 +1,7 @@
 import os
 import sys
 import google.generativeai as genai
+from google.generativeai.types import RequestOptions
 from moviepy.editor import VideoFileClip
 import argparse
 import threading
@@ -9,7 +10,8 @@ from typing import Optional
 from contextlib import contextmanager
 
 
-MODEL_NAME = "gemini-2.5-pro"
+MODEL_NAME = "gemini-3-pro-preview"
+REQUEST_TIMEOUT = 600  # 10 minutes timeout for API requests
 TEMP_AUDIO_FILENAME = "temp_audio_for_transcription.mp3"
 AUDIO_CODEC = "mp3"
 AUDIO_MIME_TYPE = "audio/mp3"
@@ -172,10 +174,10 @@ def _transcribe_audio_with_gemini(audio_file_path: str) -> str:
     print(f"Audio uploaded: {audio_file.name}")
     print("Sending audio to Gemini for transcription...")
     with suppress_stderr():
-        gemini_response = gemini_model.generate_content([
-            TRANSCRIPTION_PROMPT,
-            audio_file
-        ])
+        gemini_response = gemini_model.generate_content(
+            [TRANSCRIPTION_PROMPT, audio_file],
+            request_options=RequestOptions(timeout=REQUEST_TIMEOUT)
+        )
 
     transcription_text = gemini_response.text
     print("Transcription received from Gemini successfully.")

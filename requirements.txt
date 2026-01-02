@@ -22,7 +22,7 @@ pillow==11.3.0
 proglog==0.1.12
 proto-plus==1.26.1
 protobuf==5.29.5
-pyasn1==0.6.1
+pydub==0.25.1
 pyasn1_modules==0.4.2
 pydantic==2.12.2
 pydantic_core==2.41.4
